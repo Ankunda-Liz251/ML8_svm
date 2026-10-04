@@ -16,7 +16,6 @@ void LinearSVM::fit(const Matrix&, const std::vector<int>&) {
     throw SvmError("LinearSVM::fit: not implemented yet (Week 2)");
 }
 
-// Because fitted_ is always false in Week 1, these all throw NotFitted.
 double LinearSVM::decision_function(const Vector&) const { require_fitted("decision_function"); return 0.0; }
 Vector LinearSVM::decision_function(const Matrix&) const { require_fitted("decision_function"); return {}; }
 int LinearSVM::predict(const Vector&) const { require_fitted("predict"); return 0; }
