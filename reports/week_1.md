@@ -1,13 +1,13 @@
 # Week 1 Report: Liz (M9), Decision Function and Binary Classification
 
 ## Completed
-- Declared `decision_function` (one sample and many samples) and `to_label` in `decision.hpp`.
-- Declared the `LinearSVM` class in `linear_svm.hpp`, with the constructor, `fit`, `predict`, `decision_function`, `hyperplane()`, `history()` and `support_vector_indices()`.
+- Declared `decision function` (one sample and many samples) and `to label` in `decision.hpp`.
+- Declared the `LinearSVM` class in `linear_svm.hpp`, with the constructor, `fit`, `predict`, `decision function`, `hyperplane()`, `history()` and `support_vector_indices()`.
 - Wrote stub versions of `decision.cpp` and `linear_svm.cpp`. The library compiles, and `predict` throws `NotFitted` as the plan requires.
 - Added plain-language comments to the headers so other members can understand them.
 
 ## In Progress
-- Checking my headers against the interface contract and against M4 (Hyperplane), M7 (OptimizerConfig, TrainingHistory) and M8 (find_support_vectors) before the header freeze on Wed 7 Oct.
+- Checking my headers against the interface contract and against M4 (Hyperplane), M7 (OptimizerConfig, TrainingHistory) and M8 (find support vectors) before the header freeze on Wed 7 Oct.
 - Preparing for Week 2, when the real implementation and unit tests are due.
 
 ## Challenges / Blockers
