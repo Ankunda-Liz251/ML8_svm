@@ -9,7 +9,7 @@
 
 //  Behind the scenes, fit() asks the optimizer (M7) to find the best line,
 //  and predict() uses the decision function (decision.hpp) to pick a side.
-//
+
 //  LABELS must be -1 or +1 (use preprocessing.hpp's encode_binary_labels first).
 //  The model is LINEAR: it can only separate data with a straight line/plane.
 
