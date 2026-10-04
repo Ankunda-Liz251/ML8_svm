@@ -2,29 +2,36 @@
 #define ML8_SCALER_HPP
 
 #include <vector>
-#include <stdexcept>
 
-namespace ml8 {
+namespace ml8_svm
+{
 
-class StandardScaler {
+class StandardScaler
+{
 private:
-    std::vector<double> means_;
-    std::vector<double> std_devs_;
-    bool is_fitted_ = false;
+    std::vector<double> mean;
+    std::vector<double> standard_deviation;
+    bool fitted;
 
 public:
-    StandardScaler() = default;
+    StandardScaler();
 
     void fit(const std::vector<std::vector<double>>& X);
-    std::vector<std::vector<double>> transform(const std::vector<std::vector<double>>& X) const;
-    std::vector<std::vector<double>> fit_transform(const std::vector<std::vector<double>>& X);
-    std::vector<std::vector<double>> inverse_transform(const std::vector<std::vector<double>>& X) const;
 
-    const std::vector<double>& get_means() const { return means_; }
-    const std::vector<double>& get_std_devs() const { return std_devs_; }
-    bool is_fitted() const { return is_fitted_; }
+    std::vector<std::vector<double>> transform(
+        const std::vector<std::vector<double>>& X) const;
+
+    std::vector<std::vector<double>> fit_transform(
+        const std::vector<std::vector<double>>& X);
+
+    std::vector<std::vector<double>> inverse_transform(
+        const std::vector<std::vector<double>>& X) const;
+
+    const std::vector<double>& get_mean() const;
+
+    const std::vector<double>& get_standard_deviation() const;
+
+    bool is_fitted() const;
 };
-
-} // namespace ml8
-
-#endif // ML8_SCALER_HPP
+}
+#endif
