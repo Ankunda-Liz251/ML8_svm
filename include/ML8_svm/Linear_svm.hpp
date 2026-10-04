@@ -6,7 +6,7 @@
 //      LinearSVM model(lambda, config);   // 1. choose the settings
 //      model.fit(X_train, y_train);       // 2. learn from the data
 //      int label = model.predict(x);      // 3. use it
-//
+
 //  Behind the scenes, fit() asks the optimizer (M7) to find the best line,
 //  and predict() uses the decision function (decision.hpp) to pick a side.
 //
