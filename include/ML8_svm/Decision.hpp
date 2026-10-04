@@ -1,6 +1,5 @@
-// =============================================================================
-//  decision.hpp          
-// -----------------------------------------------------------------------------
+
+//  decision.hpp         
 //  WHAT THIS FILE IS FOR
 //  A trained SVM is just a straight line (in 2-D) / flat plane (in higher
 //  dimensions) described by a weight vector `w` and a bias number `b`.
