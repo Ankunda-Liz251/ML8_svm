@@ -1,6 +1,6 @@
 //decision.cpp
 //  The functions exist so the library compiles and others can link against
-//  them, but the real work is written in Week 2.
+//  them, but the real work is written in second week
 #include <ML8_svm/decision.hpp>
 #include <ML8_svm/errors.hpp>
 
