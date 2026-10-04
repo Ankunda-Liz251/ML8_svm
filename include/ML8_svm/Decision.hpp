@@ -7,7 +7,7 @@
 //  For any data point x we compute a single number called the SCORE:
 //
 //        score(x) = w . x + b
-//
+
 //    * score > 0  -> the point is on the "+1" side of the line
 //    * score < 0  -> the point is on the "-1" side of the line
 //    * score = 0  -> the point is exactly on the line
