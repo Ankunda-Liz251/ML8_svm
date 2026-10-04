@@ -1,14 +1,9 @@
-
-//  linear_svm.cpp  
-//  The class compiles and links. Nothing can be trained yet, so every method
-//  that needs a trained model throws NotFitted, as the plan requires.
-
 #include <ML8_svm/linear_svm.hpp>
 #include <ML8_svm/errors.hpp>
 
 namespace ml8_svm {
 
-// Just store the settings for now (validation comes in Week 2).
+
 LinearSVM::LinearSVM(double lambda, OptimizerConfig cfg)
     : lambda_(lambda), config_(cfg) {}
 
@@ -31,4 +26,4 @@ void LinearSVM::require_fitted(const char* caller) const {
     }
 }
 
-}  // namespace ml8_svm
+} 
