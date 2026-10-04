@@ -1,4 +1,3 @@
-
 //  linear_svm.cpp  
 //  The class compiles and links. Nothing can be trained yet, so every method
 //  that needs a trained model throws NotFitted, as the plan requires.
