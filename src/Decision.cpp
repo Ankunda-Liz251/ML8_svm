@@ -1,6 +1,3 @@
-
-//  The functions exist so the library compiles and others can link against
-//  them, but the real work is written in second week
 #include <ML8_svm/decision.hpp>
 #include <ML8_svm/errors.hpp>
 
@@ -18,4 +15,4 @@ int to_label(double) {
     throw SvmError("to_label: not implemented yet (Week 2)");
 }
 
-}  // namespace ml8_svm
+} 
