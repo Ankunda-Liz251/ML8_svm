@@ -1,5 +1,6 @@
 #include <ML8_svm/dataset.hpp>
 
+#include <cmath>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -41,6 +42,11 @@ static std::vector<std::string> split_line(const std::string& line, char delim) 
     }
     fields.push_back(trim_text(current));  // the last field has no delimiter after it
     return fields;
+}
+
+// True if the field means "value is missing": empty, NaN, nan, NA or ?
+static bool is_missing(const std::string& text) {
+    return text == "" || text == "NaN" || text == "nan" || text == "NA" || text == "?";
 }
 
 // If the whole text is a number, store it in "value" and return true.
@@ -142,6 +148,8 @@ Dataset load_csv(const std::string& path, bool has_header, int label_col, char d
                     throw InvalidArgument(place(path, line_number) + "label '" + fields[c] + "' is not an integer");
                 }
                 data.y.push_back(label);
+            } else if (is_missing(fields[c])) {
+                row.push_back(std::nan(""));  // NaN = "not a number"; impute_missing() fills it in later
             } else {
                 double value = 0.0;
                 if (!is_number(fields[c], value)) {
