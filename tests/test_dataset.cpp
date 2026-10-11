@@ -101,10 +101,54 @@ void test_iris() {
     check(zeros == 50 && ones == 50, "iris has 50 samples of each class");
 }
 
+//  loader options
+
+void test_no_header() {
+    write_file(TEMP_FILE, "1,2,0\n3,4,1\n");
+    Dataset d = load_csv(TEMP_FILE, false);  // false = the file has no header line
+    check(d.n_samples() == 2, "no header: 2 samples");
+    check(d.feature_names.size() == 2 && d.feature_names[0] == "x0" && d.feature_names[1] == "x1",
+          "no header: names are made up (x0, x1)");
+    check(nearly_equal(d.X[1][0], 3.0) && nearly_equal(d.X[1][1], 4.0), "no header: second row");
+    check(d.y[0] == 0 && d.y[1] == 1, "no header: labels");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_semicolon_and_label_in_first_column() {
+    write_file(TEMP_FILE, "label;a;b\n0;1.5;2.5\n1;3.5;4.5\n");
+    Dataset d = load_csv(TEMP_FILE, true, 0, ';');  // label is column 0, fields are separated by ';'
+    check(d.feature_names.size() == 2 && d.feature_names[0] == "a" && d.feature_names[1] == "b",
+          "label first: feature names are a, b");
+    check(nearly_equal(d.X[0][0], 1.5) && nearly_equal(d.X[0][1], 2.5), "label first: first row");
+    check(d.y[0] == 0 && d.y[1] == 1, "label first: labels");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_negative_label_index() {
+    write_file(TEMP_FILE, "a,l,b\n1,0,5\n2,1,6\n");
+    Dataset d = load_csv(TEMP_FILE, true, -2);  // -2 = the second column from the end
+    check(d.feature_names.size() == 2 && d.feature_names[0] == "a" && d.feature_names[1] == "b",
+          "label_col -2: feature names are a, b");
+    check(nearly_equal(d.X[0][0], 1.0) && nearly_equal(d.X[0][1], 5.0), "label_col -2: first row");
+    check(d.y[0] == 0 && d.y[1] == 1, "label_col -2: labels");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_signed_labels() {
+    write_file(TEMP_FILE, "a,label\n1.5,+1\n2.5,-1\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.y.size() == 2 && d.y[0] == 1 && d.y[1] == -1, "labels +1 and -1 are accepted");
+    std::remove(TEMP_FILE.c_str());
+}
+
 int main() {
     try {
         test_linear_separable();
         test_iris();
+        test_no_header();
+        test_semicolon_and_label_in_first_column();
+        test_negative_label_index();
+        test_signed_labels();
     } catch (const std::exception& e) {
         std::cout << "Unexpected error: " << e.what() << "\n";
         return 1;
