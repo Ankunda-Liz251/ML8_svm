@@ -215,6 +215,47 @@ void test_error_message_has_line_number() {
     std::remove(TEMP_FILE.c_str());
 }
 
+//  valid files with odd details
+
+void test_missing_values() {
+    write_file(TEMP_FILE, "a,b,label\n1,,0\nNaN,2,1\nNA,?,0\nnan,5,1\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.n_samples() == 4, "missing values: 4 samples");
+    check(nearly_equal(d.X[0][0], 1.0), "missing values: normal value is kept");
+    check(std::isnan(d.X[0][1]), "an empty field becomes NaN");
+    check(std::isnan(d.X[1][0]), "NaN becomes NaN");
+    check(nearly_equal(d.X[1][1], 2.0), "missing values: normal value is kept (2)");
+    check(std::isnan(d.X[2][0]), "NA becomes NaN");
+    check(std::isnan(d.X[2][1]), "? becomes NaN");
+    check(std::isnan(d.X[3][0]), "nan becomes NaN");
+    check(d.y[0] == 0 && d.y[1] == 1 && d.y[2] == 0 && d.y[3] == 1, "missing values: labels are fine");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_spaces_blank_lines_and_windows_line_endings() {
+    write_file(TEMP_FILE, "a, b, label\r\n\r\n 1 , 2 , 1 \r\n\r\n3,4,0\r\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.feature_names.size() == 2 && d.feature_names[0] == "a" && d.feature_names[1] == "b",
+          "spaces around names are removed");
+    check(d.n_samples() == 2, "blank lines are skipped");
+    check(nearly_equal(d.X[0][0], 1.0) && nearly_equal(d.X[0][1], 2.0), "spaces around numbers are removed");
+    check(d.y[0] == 1 && d.y[1] == 0, "labels with spaces and \\r");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_excel_byte_order_mark() {
+    // "\xEF\xBB\xBF" is the BOM. The text is split in two pieces so that the 'a'
+    // after it is not read as part of the \x escape.
+    write_file(TEMP_FILE, "\xEF\xBB\xBF" "a,b,label\n1,2,0\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.feature_names.size() == 2 && d.feature_names[0] == "a", "BOM is not part of the first name");
+
+    write_file(TEMP_FILE, "\xEF\xBB\xBF" "1,2,0\n");
+    Dataset e = load_csv(TEMP_FILE, false);
+    check(e.n_samples() == 1 && nearly_equal(e.X[0][0], 1.0), "BOM is skipped when there is no header");
+    std::remove(TEMP_FILE.c_str());
+}
+
 int main() {
     try {
         test_linear_separable();
@@ -231,6 +272,9 @@ int main() {
         test_label_column_out_of_range();
         test_one_column_only();
         test_error_message_has_line_number();
+        test_missing_values();
+        test_spaces_blank_lines_and_windows_line_endings();
+        test_excel_byte_order_mark();
     } catch (const std::exception& e) {
         std::cout << "Unexpected error: " << e.what() << "\n";
         return 1;
