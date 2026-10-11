@@ -141,6 +141,80 @@ void test_signed_labels() {
     std::remove(TEMP_FILE.c_str());
 }
 
+//  error cases
+
+void test_missing_file() {
+    bool got_file_error = false;
+    try {
+        load_csv("/no/such/folder/nothing.csv");
+    } catch (const FileError&) {
+        got_file_error = true;
+    } catch (...) {
+    }
+    check(got_file_error, "a file that does not exist gives FileError");
+}
+
+void test_empty_file() {
+    write_file(TEMP_FILE, "");
+    check(load_fails_with_invalid(TEMP_FILE), "empty file gives InvalidArgument");
+    write_file(TEMP_FILE, "\n  \n\n");
+    check(load_fails_with_invalid(TEMP_FILE), "file with only blank lines gives InvalidArgument");
+    write_file(TEMP_FILE, "a,b,label\n");
+    check(load_fails_with_invalid(TEMP_FILE), "header without data rows gives InvalidArgument");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_wrong_number_of_fields() {
+    write_file(TEMP_FILE, "a,b,label\n1,2,0\n3,4\n");
+    check(load_fails_with_invalid(TEMP_FILE), "row with too few fields gives InvalidArgument");
+    write_file(TEMP_FILE, "a,b,label\n1,2,0\n3,4,1,9\n");
+    check(load_fails_with_invalid(TEMP_FILE), "row with too many fields gives InvalidArgument");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_not_a_number() {
+    write_file(TEMP_FILE, "a,b,label\n1,abc,0\n");
+    check(load_fails_with_invalid(TEMP_FILE), "text in a feature column gives InvalidArgument");
+    write_file(TEMP_FILE, "a,b,label\n1,2x,0\n");
+    check(load_fails_with_invalid(TEMP_FILE), "'2x' is not a number");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_bad_labels() {
+    write_file(TEMP_FILE, "a,b,label\n1,2,1.5\n");
+    check(load_fails_with_invalid(TEMP_FILE), "label 1.5 is not an integer");
+    write_file(TEMP_FILE, "a,b,label\n1,2,x\n");
+    check(load_fails_with_invalid(TEMP_FILE), "label x is not an integer");
+    write_file(TEMP_FILE, "a,b,label\n1,2,\n");
+    check(load_fails_with_invalid(TEMP_FILE), "an empty label is not allowed");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_label_column_out_of_range() {
+    write_file(TEMP_FILE, "a,b,label\n1,2,0\n");
+    check(load_fails_with_invalid(TEMP_FILE, true, 3), "label_col 3 does not exist in a 3-column file");
+    check(load_fails_with_invalid(TEMP_FILE, true, -4), "label_col -4 does not exist in a 3-column file");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_one_column_only() {
+    write_file(TEMP_FILE, "a\n1\n");
+    check(load_fails_with_invalid(TEMP_FILE), "a file with one column gives InvalidArgument");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_error_message_has_line_number() {
+    write_file(TEMP_FILE, "a,b,label\n1,2,0\n3,4\n");  // the bad row is on line 3
+    std::string message = "";
+    try {
+        load_csv(TEMP_FILE);
+    } catch (const InvalidArgument& e) {
+        message = e.what();
+    }
+    check(message.find("line 3") != std::string::npos, "the error message names line 3");
+    std::remove(TEMP_FILE.c_str());
+}
+
 int main() {
     try {
         test_linear_separable();
@@ -149,6 +223,14 @@ int main() {
         test_semicolon_and_label_in_first_column();
         test_negative_label_index();
         test_signed_labels();
+        test_missing_file();
+        test_empty_file();
+        test_wrong_number_of_fields();
+        test_not_a_number();
+        test_bad_labels();
+        test_label_column_out_of_range();
+        test_one_column_only();
+        test_error_message_has_line_number();
     } catch (const std::exception& e) {
         std::cout << "Unexpected error: " << e.what() << "\n";
         return 1;
