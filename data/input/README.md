@@ -21,3 +21,18 @@ Both files are CSV with a header row. The last column is the label.
   versicolor and virginica. Rows are in the original order (sorted by class).
 - These two classes are not perfectly linearly separable, so it is a more
   realistic test for scaling, training and evaluation.
+
+## CSV format accepted by `load_csv`
+
+- One sample per line; fields separated by a delimiter (comma by default, any single
+  character can be given). Spaces around fields are ignored and blank lines are skipped.
+- An optional header line gives the column names. Windows (CRLF) line endings and a
+  UTF-8 byte-order mark (added by Excel) are handled.
+- All columns are numbers except the label column (the last one by default), which must
+  be an integer such as `0`, `1`, `-1` or `+1`.
+- An empty field, `NaN`, `nan`, `NA` or `?` in a feature column means "missing value";
+  it is loaded as NaN and can be filled with `impute_missing()`.
+- Not supported: quoted fields that contain the delimiter, and text (non-numeric) columns.
+- Errors: a missing file throws `FileError`; an empty file, a row with the wrong number of
+  fields, a bad number, a bad label or a `label_col` out of range throws `InvalidArgument`
+  and the message names the file and line.
