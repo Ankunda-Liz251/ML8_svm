@@ -95,6 +95,11 @@ Dataset load_csv(const std::string& path, bool has_header, int label_col, char d
     while (std::getline(file, line)) {
         line_number++;
 
+        // Files saved by Excel can start with 3 invisible bytes (a "BOM"). Remove them.
+        if (line_number == 1 && line.size() >= 3 && line[0] == '\xEF' && line[1] == '\xBB' && line[2] == '\xBF') {
+            line = line.substr(3);
+        }
+
         if (trim_text(line) == "") {
             continue;  // skip blank lines
         }
