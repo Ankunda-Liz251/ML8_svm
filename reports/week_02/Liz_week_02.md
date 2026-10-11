@@ -12,8 +12,9 @@
 - Syncing with M7 and M10, since my work depends on M7 and feeds M10.
 
 ## Challenges / Blockers
-- M7's real `optimizer.cpp` is not in `main` yet, so `fit` cannot be fully tested on the repo version. [Edit if this changes.]
+- M7's real `optimizer.cpp` is not in `main` yet, so `fit` cannot be fully tested on the repo version. 
 - The test helper is named `tests_utils.hpp` in the repo, but the plan calls it `test_utils.hpp`, so I had to adjust my includes.
+- my tests depend on m4 (hyperplane.cpp)and she hasn't pushed the work
 - The contract does not say which `batch_size` values are valid, so I left it unchecked. This still needs agreeing with M7.
 - My Week 1 files were accidentally removed from `main` by a cleanup commit, and I restored them with lowercase names.
 
