@@ -1,10 +1,3 @@
-// Tests for module M4: Hyperplane (hyperplane.hpp)
-//
-// Week 1: skeleton only. The tiny local helper below keeps this file
-// self-contained; when M3 merges tests/test_utils.hpp, swap CHECK for its
-// assert / expect-throws macros.
-// Week 2: enable the TODO tests (hand-computed expected values).
-
 #include <ML8_svm/hyperplane.hpp>
 
 #include <cmath>
@@ -16,9 +9,21 @@ static int g_failures = 0;
 
 #define CHECK(cond)                                                          \
     do {                                                                     \
-        if (!(cond)) {                                                       \
+        if (!(cond)) {                                                       \//the \ is to escape the newline in the macro definition
             std::cerr << "FAILED: " #cond " (" << __FILE__ << ":"            \
                       << __LINE__ << ")\n";                                  \
+            ++g_failures;                                                    \
+        }                                                                    \
+    } while (0)
+
+#define CHECK_THROWS(expr, ExType)                                           \
+    do {                                                                     \
+        bool caught = false;                                                 \
+        try { (void)(expr); } catch (const ExType&) { caught = true; }       \
+        catch (...) {}                                                       \
+        if (!caught) {                                                       \
+            std::cerr << "FAILED: expected " #ExType " from " #expr          \
+                      << " (" << __FILE__ << ":" << __LINE__ << ")\n";       \
             ++g_failures;                                                    \
         }                                                                    \
     } while (0)
@@ -27,40 +32,98 @@ static bool near(double a, double b, double eps = 1e-9) {
     return std::fabs(a - b) <= eps;
 }
 
-// Passes now: the struct stores w and b.
-static void test_construction() {
+// w = (3,4), b = -1, ||w|| = 5
+static Hyperplane make_h() {
     Hyperplane h;
     h.w = {3.0, 4.0};
     h.b = -1.0;
+    return h;
+}
+
+static void test_construction() {
+    Hyperplane h = make_h();
     CHECK(h.w.size() == 2);
     CHECK(near(h.b, -1.0));
 }
 
-// Hand-computed example for week 2: w = (3,4), b = -1, ||w|| = 5.
-//   x = (1,1): score = 3+4-1 = 6, distance = 6/5 = 1.2
-//   y = +1: functional margin = 6, geometric margin = 1.2
-//   margin_width = 2/5 = 0.4
-static void test_values_TODO() {
-    // Hyperplane h; h.w = {3.0, 4.0}; h.b = -1.0;
-    // Vector x = {1.0, 1.0};
-    // CHECK(near(h.score(x), 6.0));
-    // CHECK(near(h.distance(x), 1.2));
-    // CHECK(near(h.functional_margin(x, +1), 6.0));
-    // CHECK(near(h.geometric_margin(x, +1), 1.2));
-    // CHECK(near(h.functional_margin(x, -1), -6.0));
-    // CHECK(near(h.margin_width(), 0.4));
+static void test_score() {
+    Hyperplane h = make_h();
+    CHECK(near(h.score({1.0, 1.0}), 6.0));    // 3+4-1
+    CHECK(near(h.score({0.0, 0.0}), -1.0));   // = b
+    CHECK(near(h.score({1.0, -1.0}), -2.0));  // 3-4-1
+    CHECK(near(h.score({1.0, 0.0}), 2.0));    // 3-1 -> boundary-ish side check
 }
 
-static void test_errors_TODO() {
-    // w = 0            -> distance / geometric_margin / margin_width throw InvalidArgument
-    // x wrong size     -> score throws DimensionMismatch
-    // y not in {-1,+1} -> functional_margin throws InvalidArgument
+static void test_distance() {
+    Hyperplane h = make_h();
+    CHECK(near(h.distance({1.0, 1.0}), 1.2));    // 6/5
+    CHECK(near(h.distance({1.0, -1.0}), -0.4));  // -2/5
+    CHECK(near(h.distance({0.2, 0.1}), 0.0));    // 0.6+0.4-1 = 0, on the boundary
+}
+
+static void test_functional_margin() {
+    Hyperplane h = make_h();
+    CHECK(near(h.functional_margin({1.0, 1.0}, +1), 6.0));
+    CHECK(near(h.functional_margin({1.0, 1.0}, -1), -6.0));   // misclassified
+    CHECK(near(h.functional_margin({1.0, -1.0}, -1), 2.0));   // correct, negative side
+}
+
+static void test_geometric_margin() {
+    Hyperplane h = make_h();
+    CHECK(near(h.geometric_margin({1.0, 1.0}, +1), 1.2));
+    CHECK(near(h.geometric_margin({1.0, 1.0}, -1), -1.2));
+    CHECK(near(h.geometric_margin({1.0, -1.0}, -1), 0.4));
+}
+
+static void test_scale_invariance() {
+    // Doubling (w,b) doubles the functional margin but not the geometric margin.
+    Hyperplane h = make_h();
+    Hyperplane h2;
+    h2.w = {6.0, 8.0};
+    h2.b = -2.0;
+    Vector x = {1.0, 1.0};
+    CHECK(near(h2.functional_margin(x, +1), 2.0 * h.functional_margin(x, +1)));
+    CHECK(near(h2.geometric_margin(x, +1), h.geometric_margin(x, +1)));
+}
+
+static void test_margin_width() {
+    Hyperplane h = make_h();
+    CHECK(near(h.margin_width(), 0.4));  // 2/5
+    Hyperplane u;
+    u.w = {1.0, 0.0};
+    CHECK(near(u.margin_width(), 2.0));
+}
+
+static void test_errors() {
+    Hyperplane h = make_h();
+    CHECK_THROWS(h.score({1.0}), DimensionMismatch);
+    CHECK_THROWS(h.score({1.0, 2.0, 3.0}), DimensionMismatch);
+    CHECK_THROWS(h.functional_margin({1.0, 1.0}, 0), InvalidArgument);
+    CHECK_THROWS(h.functional_margin({1.0, 1.0}, 2), InvalidArgument);
+    CHECK_THROWS(h.geometric_margin({1.0, 1.0}, 0), InvalidArgument);
+}
+
+static void test_zero_weight() {
+    Hyperplane z;
+    z.w = {0.0, 0.0};
+    z.b = 0.5;
+    CHECK(near(z.score({3.0, 4.0}), 0.5));              // score still defined
+    CHECK(near(z.functional_margin({3.0, 4.0}, -1), -0.5));
+    CHECK_THROWS(z.distance({1.0, 1.0}), InvalidArgument);
+    CHECK_THROWS(z.geometric_margin({1.0, 1.0}, +1), InvalidArgument);
+    CHECK_THROWS(z.margin_width(), InvalidArgument);
 }
 
 int main() {
     test_construction();
-    test_values_TODO();
-    test_errors_TODO();
+    test_score();
+    test_distance();
+    test_functional_margin();
+    test_geometric_margin();
+    test_scale_invariance();
+    test_margin_width();
+    test_errors();
+    test_zero_weight();
 
     if (g_failures == 0) {
         std::cout << "test_hyperplane: all tests passed\n";
