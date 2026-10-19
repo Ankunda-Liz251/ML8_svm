@@ -9,7 +9,10 @@
 
 namespace ml8_svm {
 
+// ---------------------------------------------------------------------------
 // Small helper functions. "static" means: only used inside this file.
+// ---------------------------------------------------------------------------
+
 // True for the characters we ignore at the start and end of a field.
 static bool is_blank_char(char c) {
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
@@ -28,19 +31,29 @@ static std::string trim_text(const std::string& text) {
     return text.substr(start, end - start);
 }
 
+// Remove one pair of double quotes around a field: "1.5" (with the quotes) becomes 1.5.
+// Spaces inside the quotes are removed too. A field without quotes is returned unchanged.
+static std::string remove_quotes(const std::string& text) {
+    if (text.size() >= 2 && text[0] == '"' && text[text.size() - 1] == '"') {
+        return trim_text(text.substr(1, text.size() - 2));
+    }
+    return text;
+}
+
 // Cut one line into fields. "1, 2,3" with delimiter ',' gives "1", "2", "3".
+// A quoted field must not contain the delimiter.
 static std::vector<std::string> split_line(const std::string& line, char delim) {
     std::vector<std::string> fields;
     std::string current = "";
     for (size_t i = 0; i < line.size(); i++) {
         if (line[i] == delim) {
-            fields.push_back(trim_text(current));
+            fields.push_back(remove_quotes(trim_text(current)));
             current = "";
         } else {
             current += line[i];
         }
     }
-    fields.push_back(trim_text(current));  // the last field has no delimiter after it
+    fields.push_back(remove_quotes(trim_text(current)));  // the last field has no delimiter after it
     return fields;
 }
 
@@ -71,13 +84,28 @@ static bool is_integer(const std::string& text, int& value) {
     }
 }
 
+// True if the text is a label: a whole number. "1", "-1" and "+1" are fine, and so are
+// "1.0" and "-1.0" (some programs write labels like that). "1.5" and "nan" are not labels.
+static bool is_label(const std::string& text, int& label) {
+    if (is_integer(text, label)) {
+        return true;
+    }
+    double value = 0.0;
+    if (is_number(text, value) && value == std::floor(value) && value > -1000000.0 && value < 1000000.0) {
+        label = static_cast<int>(value);
+        return true;
+    }
+    return false;
+}
+
 // The start of every error message: which file and which line.
 static std::string place(const std::string& path, int line_number) {
     return "load_csv: " + path + ", line " + std::to_string(line_number) + ": ";
 }
 
-
+// ---------------------------------------------------------------------------
 // load_csv
+// ---------------------------------------------------------------------------
 
 Dataset load_csv(const std::string& path, bool has_header, int label_col, char delim) {
     std::ifstream file(path);
@@ -149,7 +177,7 @@ Dataset load_csv(const std::string& path, bool has_header, int label_col, char d
         for (int c = 0; c < column_count; c++) {
             if (c == label_index) {
                 int label = 0;
-                if (!is_integer(fields[c], label)) {
+                if (!is_label(fields[c], label)) {
                     throw InvalidArgument(place(path, line_number) + "label '" + fields[c] + "' is not an integer");
                 }
                 data.y.push_back(label);
