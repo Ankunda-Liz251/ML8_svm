@@ -29,7 +29,9 @@ Both files are CSV with a header row. The last column is the label.
 - An optional header line gives the column names. Windows (CRLF) line endings and a
   UTF-8 byte-order mark (added by Excel) are handled.
 - All columns are numbers except the label column (the last one by default), which must
-  be an integer such as `0`, `1`, `-1` or `+1`.
+  be a whole number such as `0`, `1`, `-1` or `+1` (`1.0` and `-1.0` are accepted too).
+- A field can be wrapped in double quotes, for example `"1.5"`; the quotes are removed.
+- Numbers can be written like `-2.5`, `+3`, `.5` or `1e-3`.
 - An empty field, `NaN`, `nan`, `NA` or `?` in a feature column means "missing value";
   it is loaded as NaN and can be filled with `impute_missing()`.
 - Not supported: quoted fields that contain the delimiter, and text (non-numeric) columns.

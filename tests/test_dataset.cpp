@@ -58,7 +58,7 @@ bool load_fails_with_invalid(const std::string& path, bool has_header = true, in
     return false;  // no error at all
 }
 
-//  the two bundled datasets
+// ------------------------------------------------------------ the two bundled datasets
 
 void test_linear_separable() {
     Dataset d = load_csv(std::string(ML8_DATA_DIR) + "/input/linear_separable.csv");
@@ -101,7 +101,7 @@ void test_iris() {
     check(zeros == 50 && ones == 50, "iris has 50 samples of each class");
 }
 
-//  loader options
+// ------------------------------------------------------------ loader options
 
 void test_no_header() {
     write_file(TEMP_FILE, "1,2,0\n3,4,1\n");
@@ -141,7 +141,7 @@ void test_signed_labels() {
     std::remove(TEMP_FILE.c_str());
 }
 
-//  error cases
+// ------------------------------------------------------------ error cases
 
 void test_missing_file() {
     bool got_file_error = false;
@@ -215,7 +215,7 @@ void test_error_message_has_line_number() {
     std::remove(TEMP_FILE.c_str());
 }
 
-//  valid files with odd details
+// ------------------------------------------------------------ valid files with odd details
 
 void test_missing_values() {
     write_file(TEMP_FILE, "a,b,label\n1,,0\nNaN,2,1\nNA,?,0\nnan,5,1\n");
@@ -256,6 +256,93 @@ void test_excel_byte_order_mark() {
     std::remove(TEMP_FILE.c_str());
 }
 
+// ------------------------------------------------------------ number formats and file layouts
+
+void test_number_formats() {
+    write_file(TEMP_FILE, "a,b,label\n-2.5,1e-3,0\n+3,.5,1\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(nearly_equal(d.X[0][0], -2.5), "negative number");
+    check(nearly_equal(d.X[0][1], 0.001), "scientific notation 1e-3");
+    check(nearly_equal(d.X[1][0], 3.0), "number with a plus sign");
+    check(nearly_equal(d.X[1][1], 0.5), "number without a leading zero (.5)");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_tab_delimiter() {
+    write_file(TEMP_FILE, "a\tb\tlabel\n1\t2\t0\n3\t4\t1\n");
+    Dataset d = load_csv(TEMP_FILE, true, -1, '\t');
+    check(d.n_samples() == 2, "tab-separated file: 2 samples");
+    check(d.feature_names.size() == 2 && d.feature_names[1] == "b", "tab-separated file: feature names");
+    check(nearly_equal(d.X[1][0], 3.0) && d.y[1] == 1, "tab-separated file: second row");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_no_final_newline() {
+    write_file(TEMP_FILE, "a,b,label\n1,2,0\n3,4,1");  // the last line has no \n
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.n_samples() == 2, "a file without a final newline still gives 2 samples");
+    check(d.y[1] == 1, "the last line is read correctly");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_names_with_spaces() {
+    write_file(TEMP_FILE, "sepal length, petal width ,label\n1,2,0\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.feature_names.size() == 2, "two feature names");
+    check(d.feature_names[0] == "sepal length", "a space inside a name is kept");
+    check(d.feature_names[1] == "petal width", "spaces around a name are removed");
+    std::remove(TEMP_FILE.c_str());
+}
+
+// ------------------------------------------------------------ quoted fields
+
+void test_quoted_fields() {
+    write_file(TEMP_FILE, "\"x1\",\"x2\",\"label\"\n\"1.5\",\"2.5\",\"0\"\n\"3.5\",4.5,1\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.feature_names.size() == 2 && d.feature_names[0] == "x1" && d.feature_names[1] == "x2",
+          "quotes around names are removed");
+    check(d.n_samples() == 2, "quoted file: 2 samples");
+    check(nearly_equal(d.X[0][0], 1.5) && nearly_equal(d.X[0][1], 2.5), "quotes around numbers are removed");
+    check(d.y[0] == 0 && d.y[1] == 1, "quotes around labels are removed");
+    check(nearly_equal(d.X[1][0], 3.5) && nearly_equal(d.X[1][1], 4.5), "quoted and unquoted fields can be mixed");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_spaces_inside_quotes() {
+    write_file(TEMP_FILE, "\" a \", b ,label\n\" 1 \",2,0\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.feature_names.size() == 2 && d.feature_names[0] == "a" && d.feature_names[1] == "b",
+          "spaces inside and outside quotes are removed");
+    check(nearly_equal(d.X[0][0], 1.0), "a quoted number with spaces is read");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_quote_that_is_not_closed() {
+    write_file(TEMP_FILE, "a,b,label\n\"1,2,0\n");
+    check(load_fails_with_invalid(TEMP_FILE), "a field with only one quote is not a number");
+    std::remove(TEMP_FILE.c_str());
+}
+
+// ------------------------------------------------------------ labels written like 1.0
+
+void test_labels_written_with_decimals() {
+    write_file(TEMP_FILE, "a,label\n1.5,1.0\n2.5,-1.0\n3.5,0\n");
+    Dataset d = load_csv(TEMP_FILE);
+    check(d.y.size() == 3, "3 labels");
+    check(d.y[0] == 1 && d.y[1] == -1 && d.y[2] == 0, "labels 1.0, -1.0 and 0 become 1, -1 and 0");
+    std::remove(TEMP_FILE.c_str());
+}
+
+void test_labels_that_are_still_rejected() {
+    write_file(TEMP_FILE, "a,label\n1,1.5\n");
+    check(load_fails_with_invalid(TEMP_FILE), "label 1.5 is still rejected");
+    write_file(TEMP_FILE, "a,label\n1,nan\n");
+    check(load_fails_with_invalid(TEMP_FILE), "label nan is rejected");
+    write_file(TEMP_FILE, "a,label\n1,inf\n");
+    check(load_fails_with_invalid(TEMP_FILE), "label inf is rejected");
+    std::remove(TEMP_FILE.c_str());
+}
+
 int main() {
     try {
         test_linear_separable();
@@ -275,6 +362,15 @@ int main() {
         test_missing_values();
         test_spaces_blank_lines_and_windows_line_endings();
         test_excel_byte_order_mark();
+        test_number_formats();
+        test_tab_delimiter();
+        test_no_final_newline();
+        test_names_with_spaces();
+        test_quoted_fields();
+        test_spaces_inside_quotes();
+        test_quote_that_is_not_closed();
+        test_labels_written_with_decimals();
+        test_labels_that_are_still_rejected();
     } catch (const std::exception& e) {
         std::cout << "Unexpected error: " << e.what() << "\n";
         return 1;
