@@ -4,7 +4,7 @@
 #include <cmath>
 
 void test_standard_scaler() {
-    ml8::StandardScaler scaler;
+   ml8_svm::StandardScaler scaler;
 
     std::vector<std::vector<double>> data = {
         {1.0, 10.0},
