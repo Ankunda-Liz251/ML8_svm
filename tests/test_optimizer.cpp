@@ -4,8 +4,9 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <vector>
 
-int main() {
+void test_optimizer(std::size_t batch_size, const char* method) {
     ml8_svm::Hyperplane hyperplane;
 
     ml8_svm::Matrix X = {
@@ -20,8 +21,9 @@ int main() {
     ml8_svm::OptimizerConfig config;
     config.learning_rate = 0.1;
     config.epochs = 100;
-    config.batch_size = 4;
+    config.batch_size = batch_size;
     config.tol = 0.0;
+    config.seed = 42;
 
     const double lambda = 0.01;
 
@@ -33,17 +35,32 @@ int main() {
     assert(!hyperplane.w.empty());
     assert(std::abs(hyperplane.w[0]) > 0.0);
 
-    // The training history must contain the initial and final losses.
-    assert(history.loss.size() == config.epochs + 1);
+    // History contains initial loss and one entry per completed epoch.
+    assert(history.loss.size() == history.epochs_run + 1);
     assert(history.epochs_run == config.epochs);
 
-    // This simple, separable dataset should have a lower final loss.
+    // Training should reduce the loss on this separable dataset.
     assert(history.loss.back() < history.loss.front());
 
-    // The learned hyperplane should classify both sides correctly.
+    // The learned model should classify both classes correctly.
     assert(hyperplane.score(X[0]) < 0.0);
+    assert(hyperplane.score(X[1]) < 0.0);
+    assert(hyperplane.score(X[2]) > 0.0);
     assert(hyperplane.score(X[3]) > 0.0);
 
-    std::cout << "Optimizer training test passed." << std::endl;
+    std::cout << method << " test passed. Initial loss: "
+              << history.loss.front()
+              << ", final loss: " << history.loss.back()
+              << '\n';
+}
+
+int main() {
+    // Batch gradient descent: process all four samples per update.
+    test_optimizer(4, "Batch gradient descent");
+
+    // Stochastic gradient descent: process one sample per update.
+    test_optimizer(1, "SGD");
+
+    std::cout << "All optimizer tests passed.\n";
     return 0;
 }
