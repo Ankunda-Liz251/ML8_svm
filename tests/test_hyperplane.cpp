@@ -9,7 +9,7 @@ static int g_failures = 0;
 
 #define CHECK(cond)                                                          \
     do {                                                                     \
-        if (!(cond)) {                                                       \//the \ is to escape the newline in the macro definition
+        if (!(cond)) {                                                       \
             std::cerr << "FAILED: " #cond " (" << __FILE__ << ":"            \
                       << __LINE__ << ")\n";                                  \
             ++g_failures;                                                    \
@@ -114,6 +114,46 @@ static void test_zero_weight() {
     CHECK_THROWS(z.margin_width(), InvalidArgument);
 }
 
+static void test_boundary_and_sign() {
+    Hyperplane h = make_h();
+    Vector on = {0.2, 0.1};                       // score = 0
+    CHECK(near(h.score(on), 0.0));
+    CHECK(near(h.geometric_margin(on, +1), 0.0));
+    CHECK(near(h.geometric_margin(on, -1), 0.0));
+    // Flipping the label flips the sign of both margins.
+    Vector x = {1.0, 1.0};
+    CHECK(near(h.functional_margin(x, +1), -h.functional_margin(x, -1)));
+    CHECK(near(h.geometric_margin(x, +1), -h.geometric_margin(x, -1)));
+}
+
+static void test_support_vector_margin_points() {
+    // Points with score = +1 / -1 lie on the margin edges: distance = +/- 1/||w||.
+    Hyperplane h = make_h();
+    Vector pos = {0.4, 0.2};                      // 1.2+0.8-1 = 1
+    Vector neg = {0.0, 0.0};                      // -1
+    CHECK(near(h.score(pos), 1.0));
+    CHECK(near(h.score(neg), -1.0));
+    CHECK(near(h.distance(pos) - h.distance(neg), h.margin_width()));
+}
+
+static void test_empty_and_tiny_weights() {
+    Hyperplane e;                                  // w empty, b = 0
+    CHECK(near(e.score({}), 0.0));
+    CHECK_THROWS(e.margin_width(), InvalidArgument);
+    CHECK_THROWS(e.distance({}), InvalidArgument);
+
+    Hyperplane t;                                  // tiny but valid weights
+    t.w = {1e-6, 0.0};
+    CHECK(near(t.margin_width(), 2e6, 1e-3));
+}
+
+static void test_large_values() {
+    Hyperplane h;
+    h.w = {3e8, 4e8};
+    h.b = 0.0;
+    CHECK(near(h.distance({1.0, 1.0}), 1.4, 1e-9)); // 7e8 / 5e8
+}
+
 int main() {
     test_construction();
     test_score();
@@ -124,6 +164,10 @@ int main() {
     test_margin_width();
     test_errors();
     test_zero_weight();
+    test_boundary_and_sign();
+    test_support_vector_margin_points();
+    test_empty_and_tiny_weights();
+    test_large_values();
 
     if (g_failures == 0) {
         std::cout << "test_hyperplane: all tests passed\n";
