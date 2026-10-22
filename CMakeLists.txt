@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(ML8_svm
     src/scaler.cpp
     src/optimizer.cpp
+    src/hyperplane.cpp
+    src/linalg.cpp
 )
 
 add_library(ML8_svm::ML8_svm ALIAS ML8_svm)
