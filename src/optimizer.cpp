@@ -1,5 +1,5 @@
+
 #include <ML8_svm/optimizer.hpp>
-#include <ML8_svm/hyperplane.hpp>
 #include <ML8_svm/errors.hpp>
 
 namespace ml8_svm {
@@ -11,9 +11,18 @@ TrainingHistory optimize(
     double lambda,
     const OptimizerConfig& config
 ) {
+    // Week 1: Function skeleton.
+    // The gradient-based optimization algorithm will be implemented
+    // in the subsequent development stage.
+
+    (void)hyperplane;
+    (void)X;
+    (void)y;
+    (void)lambda;
+    (void)config;
+
     TrainingHistory history;
-    // Stub implementation for Week 1 skeleton
     return history;
 }
 
-} // namespace ml8_svmss
+} // namespace ml8_svm
