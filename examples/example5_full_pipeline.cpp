@@ -1,4 +1,4 @@
-// example5_full_pipeline.cpp - Full pipeline with evaluation (M10)
+// example5_full_pipeline.cpp - Full pipeline with evaluation
 //
 // Usage: example5_full_pipeline [input.csv] [output_predictions.csv]
 // Defaults: data/input/linear_separable.csv  data/output/predictions.csv
