@@ -2,8 +2,9 @@
 #ifndef ML8_SVM_OPTIMIZER_HPP
 #define ML8_SVM_OPTIMIZER_HPP
 
-#include <vector>
 #include <cstddef>
+#include <vector>
+
 #include <ML8_svm/types.hpp>
 #include <ML8_svm/hyperplane.hpp>
 
@@ -13,12 +14,12 @@ namespace ml8_svm {
  * @brief Configuration settings for gradient-based SVM optimization.
  */
 struct OptimizerConfig {
-    double learning_rate{0.01}; ///< Positive step size for weight updates.
-    size_t epochs{100};          ///< Maximum number of training epochs.
-    size_t batch_size{32};       ///< Samples processed per gradient update.
-    double tol{1e-4};            ///< Minimum loss-change tolerance for stopping.
-    bool decay{false};           ///< Enable learning-rate decay across epochs.
-    unsigned seed{42};            ///< Seed for reproducible sample shuffling.
+    double learning_rate{0.01};
+    std::size_t epochs{100};
+    std::size_t batch_size{32};
+    double tol{1e-4};
+    bool decay{false};
+    unsigned seed{42};
 };
 
 /**

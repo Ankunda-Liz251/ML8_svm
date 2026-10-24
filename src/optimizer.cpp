@@ -3,6 +3,14 @@
 #include <ML8_svm/hinge_loss.hpp>
 #include <ML8_svm/regularization.hpp>
 #include <ML8_svm/errors.hpp>
+#include <ML8_svm/linalg.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <numeric>
+#include <random>
+#include <string>
+#include <vector>
 
 #include <algorithm>
 #include <cmath>
