@@ -1,5 +1,7 @@
 
 #include <ML8_svm/optimizer.hpp>
+#include <ML8_svm/hinge_loss.hpp>
+#include <ML8_svm/regularization.hpp>
 #include <ML8_svm/errors.hpp>
 #include <ML8_svm/linalg.hpp>
 
@@ -10,6 +12,12 @@
 #include <string>
 #include <vector>
 
+#include <algorithm>
+#include <cmath>
+#include <numeric>
+#include <random>
+#include <string>
+
 namespace ml8_svm {
 
 TrainingHistory optimize(
@@ -19,148 +27,105 @@ TrainingHistory optimize(
     double lambda,
     const OptimizerConfig& config
 ) {
-    check_X_y(X, y, "optimize");
+    // Validate configuration and training data.
+    if (X.empty() || X.size() != y.size()) {
+        throw InvalidArgument("X and y must contain the same non-zero number of samples.");
+    }
 
     if (lambda < 0.0 || !std::isfinite(lambda)) {
-        throw InvalidArgument("lambda must be finite and >= 0");
+        throw InvalidArgument("lambda must be finite and non-negative.");
     }
 
     if (config.learning_rate <= 0.0 ||
         !std::isfinite(config.learning_rate)) {
-        throw InvalidArgument("learning_rate must be finite and > 0");
+        throw InvalidArgument("learning_rate must be finite and positive.");
     }
 
-    if (config.batch_size == 0) {
-        throw InvalidArgument("batch_size must be > 0");
+    if (config.epochs == 0 || config.batch_size == 0) {
+        throw InvalidArgument("epochs and batch_size must be positive.");
     }
 
-    if (!std::isfinite(config.tol) || config.tol < 0.0) {
-        throw InvalidArgument("tol must be finite and >= 0");
+    if (config.tol < 0.0 || !std::isfinite(config.tol)) {
+        throw InvalidArgument("tol must be finite and non-negative.");
     }
 
-    const std::size_t sample_count = X.size();
-    const std::size_t feature_count = X[0].size();
-    const std::size_t batch_size =
-        std::min(config.batch_size, sample_count);
+    const std::size_t n = X.size();
+    const std::size_t d = X.front().size();
 
-    for (int label : y) {
-        if (label != -1 && label != 1) {
-            throw InvalidArgument("SVM labels must be -1 or +1");
-        }
+    if (d == 0 || hyperplane.w.size() != d) {
+        throw DimensionMismatch("Feature dimensions must match hyperplane weights.");
     }
 
-    if (hyperplane.w.empty()) {
-        hyperplane.w.assign(feature_count, 0.0);
-    } else if (hyperplane.w.size() != feature_count) {
-        throw DimensionMismatch(
-            "Hyperplane weights must match the number of features"
-        );
-    }
-
-    if (!std::isfinite(hyperplane.b)) {
-        throw InvalidArgument("Hyperplane bias must be finite");
-    }
-
-    for (double weight : hyperplane.w) {
-        if (!std::isfinite(weight)) {
-            throw InvalidArgument("Hyperplane weights must be finite");
-        }
-    }
-
-    // Calculate the regularized hinge-loss objective.
-    const auto calculate_loss = [&]() {
-        double weight_squared_sum = 0.0;
-
-        for (double weight : hyperplane.w) {
-            weight_squared_sum += weight * weight;
+    for (std::size_t i = 0; i < n; ++i) {
+        if (X[i].size() != d) {
+            throw DimensionMismatch("All samples must have the same feature count.");
         }
 
-        double hinge_sum = 0.0;
-
-        for (std::size_t i = 0; i < sample_count; ++i) {
-            const double margin =
-                static_cast<double>(y[i]) * hyperplane.score(X[i]);
-
-            hinge_sum += std::max(0.0, 1.0 - margin);
+        if (y[i] != -1 && y[i] != 1) {
+            throw InvalidArgument("Labels must be -1 or +1.");
         }
-
-        return 0.5 * lambda * weight_squared_sum
-             + hinge_sum / static_cast<double>(sample_count);
-    };
+    }
 
     TrainingHistory history;
+    history.loss.reserve(config.epochs);
 
-    if (config.epochs == 0) {
-        history.loss.push_back(calculate_loss());
-        return history;
-    }
-
-    std::vector<std::size_t> indices(sample_count);
+    std::vector<std::size_t> indices(n);
     std::iota(indices.begin(), indices.end(), 0);
 
+    // A fixed seed makes the sample order reproducible.
     std::mt19937 generator(config.seed);
 
-    double previous_loss = calculate_loss();
-
-    history.loss.push_back(previous_loss);
+    double previous_loss = objective(hyperplane, X, y, lambda);
 
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
         std::shuffle(indices.begin(), indices.end(), generator);
 
+        // Optional learning-rate decay.
         const double learning_rate = config.decay
-            ? config.learning_rate /
-                  std::sqrt(static_cast<double>(epoch + 1))
+            ? config.learning_rate / (1.0 + static_cast<double>(epoch))
             : config.learning_rate;
 
-        for (std::size_t start = 0;
-             start < sample_count;
-             start += batch_size) {
-
+        // Process mini-batches. batch_size = 1 gives SGD;
+        // batch_size >= n gives batch gradient descent.
+        for (std::size_t start = 0; start < n;
+             start += config.batch_size) {
             const std::size_t end =
-                std::min(start + batch_size, sample_count);
+                std::min(start + config.batch_size, n);
 
-            Vector gradient_w(feature_count, 0.0);
-            double gradient_b = 0.0;
+            Matrix batch_X;
+            std::vector<int> batch_y;
+            batch_X.reserve(end - start);
+            batch_y.reserve(end - start);
 
-            for (std::size_t j = start; j < end; ++j) {
-                const std::size_t i = indices[j];
-
-                const double margin =
-                    static_cast<double>(y[i]) * hyperplane.score(X[i]);
-
-                // Hinge loss contributes a gradient when margin < 1.
-                if (margin < 1.0) {
-                    const double label = static_cast<double>(y[i]);
-
-                    for (std::size_t k = 0; k < feature_count; ++k) {
-                        gradient_w[k] -= label * X[i][k];
-                    }
-
-                    gradient_b -= label;
-                }
+            for (std::size_t k = start; k < end; ++k) {
+                batch_X.push_back(X[indices[k]]);
+                batch_y.push_back(y[indices[k]]);
             }
 
-            const double inverse_batch_size =
-                1.0 / static_cast<double>(end - start);
+            Vector gw(d, 0.0);
+            double gb = 0.0;
 
-            for (std::size_t k = 0; k < feature_count; ++k) {
-                gradient_w[k] =
-                    lambda * hyperplane.w[k]
-                    + gradient_w[k] * inverse_batch_size;
+            hinge_subgradient(hyperplane, batch_X, batch_y, gw, gb);
 
-                hyperplane.w[k] -= learning_rate * gradient_w[k];
+            // Add L2 regularization to the weight gradient only.
+            const Vector reg_gradient = l2_gradient(hyperplane.w, lambda);
+
+            for (std::size_t j = 0; j < d; ++j) {
+                gw[j] += reg_gradient[j];
+                hyperplane.w[j] -= learning_rate * gw[j];
             }
 
-            gradient_b *= inverse_batch_size;
-            hyperplane.b -= learning_rate * gradient_b;
+            // The bias is not regularized.
+            hyperplane.b -= learning_rate * gb;
         }
 
-        const double current_loss = calculate_loss();
+        const double current_loss = objective(hyperplane, X, y, lambda);
         history.loss.push_back(current_loss);
         history.epochs_run = epoch + 1;
 
-        if (config.tol > 0.0 &&
-            std::abs(previous_loss - current_loss) < config.tol) {
+        // Stop if improvement is no greater than the tolerance.
+        if (std::abs(previous_loss - current_loss) <= config.tol) {
+            history.converged = true;
             break;
         }
 
