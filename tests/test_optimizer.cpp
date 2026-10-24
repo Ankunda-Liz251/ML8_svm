@@ -31,18 +31,13 @@ void test_optimizer(std::size_t batch_size, const char* method) {
         hyperplane, X, y, lambda, config
     );
 
-    // Training must update the weights.
     assert(!hyperplane.w.empty());
     assert(std::abs(hyperplane.w[0]) > 0.0);
 
-    // History contains initial loss and one entry per completed epoch.
     assert(history.loss.size() == history.epochs_run + 1);
     assert(history.epochs_run == config.epochs);
-
-    // Training should reduce the loss on this separable dataset.
     assert(history.loss.back() < history.loss.front());
 
-    // The learned model should classify both classes correctly.
     assert(hyperplane.score(X[0]) < 0.0);
     assert(hyperplane.score(X[1]) < 0.0);
     assert(hyperplane.score(X[2]) > 0.0);
@@ -55,10 +50,7 @@ void test_optimizer(std::size_t batch_size, const char* method) {
 }
 
 int main() {
-    // Batch gradient descent: process all four samples per update.
     test_optimizer(4, "Batch gradient descent");
-
-    // Stochastic gradient descent: process one sample per update.
     test_optimizer(1, "SGD");
 
     std::cout << "All optimizer tests passed.\n";
