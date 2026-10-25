@@ -1,0 +1,9 @@
+# From the repo root, after CMake registers the files
+cmake -S . -B build && cmake --build build
+cd build && ctest --output-on-failure && cd ..
+
+# Generate the file you must commit
+./build/example5_full_pipeline data/input/linear_separable.csv data/output/predictions.csv
+
+# Run it on the real dataset committed, to get the results for the report
+./build/example5_full_pipeline data/input/<real_dataset>.csv data/output/predictions_real.csv
